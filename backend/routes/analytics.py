@@ -89,8 +89,9 @@ class FullAnalysisRequest(BaseModel):
     has_ai: bool = False
     custom_pcb: bool = False
     large_scale: bool = False
-    # Optional override
+    # Optional overrides
     quoted_price: Optional[float] = None
+    user_estimated_hours: Optional[float] = None  # User's own completion time estimate
 
 
 # ─── Endpoints ───────────────────────────────────────────────────────
@@ -163,4 +164,5 @@ async def api_full_analysis(req: FullAnalysisRequest, user=Depends(get_current_u
         custom_pcb=req.custom_pcb,
         large_scale=req.large_scale,
         quoted_price=req.quoted_price,
+        user_estimated_hours=req.user_estimated_hours,
     )

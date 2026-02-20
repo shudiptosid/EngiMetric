@@ -556,6 +556,7 @@ def full_analysis(
     safety_critical: bool = False, has_ai: bool = False,
     custom_pcb: bool = False, large_scale: bool = False,
     quoted_price: Optional[float] = None,
+    user_estimated_hours: Optional[float] = None,
 ) -> dict:
     """Run full calibrated pipeline with India-market benchmarks."""
 
@@ -570,6 +571,18 @@ def full_analysis(
 
     # Step 2: Hours
     hours = estimate_hours(comp["total_score"], cls)
+    ai_estimated_hours = hours["estimated_hours"]
+
+    # If user provided their own hours estimate, use it for pricing but keep AI estimate for comparison
+    if user_estimated_hours is not None and user_estimated_hours > 0:
+        hours["user_estimated_hours"] = round(user_estimated_hours)
+        hours["ai_estimated_hours"] = ai_estimated_hours
+        hours["estimated_hours"] = round(user_estimated_hours)  # Use user's hours for pricing
+        hours["hours_source"] = "user"
+    else:
+        hours["user_estimated_hours"] = None
+        hours["ai_estimated_hours"] = ai_estimated_hours
+        hours["hours_source"] = "ai"
 
     # Step 3: Risk
     risk = calculate_risk(safety_critical, has_ai, custom_pcb, large_scale)
@@ -618,9 +631,17 @@ def full_analysis(
     ]
 
     # Reasoning
+    # Build reasoning with user hours comparison if applicable
+    hours_reasoning = f"Estimated {hours['estimated_hours']}h"
+    if user_estimated_hours is not None and user_estimated_hours > 0:
+        hours_reasoning = (
+            f"AI estimated {ai_estimated_hours}h, you estimated {round(user_estimated_hours)}h — "
+            f"using your estimate for pricing"
+        )
+
     reasoning = (
         f"{cls} project (score {comp['total_score']}/25). "
-        f"Estimated {hours['estimated_hours']}h at ₹{hourly_rate:,.0f}/hr "
+        f"{hours_reasoning} at ₹{hourly_rate:,.0f}/hr "
         f"(market rate: ₹{suggested_rate:,.0f}/hr for {cls}). "
         f"Risk {risk['risk_percent']}%. "
         f"Predicted price ₹{price['predicted_price']:,.0f} "
